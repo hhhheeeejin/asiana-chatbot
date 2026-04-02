@@ -11,7 +11,7 @@ try:
     ADMIN_ID = st.secrets["ADMIN_ID"]
     ADMIN_PW = st.secrets["ADMIN_PW"]
     # 암호화/복호화에 사용할 열쇠입니다.
-    cipher_suite = Fernet(st.secrets["ENCRYPT_KEY"].encode())
+    cipher_suite = Fernet(st.secrets["h4k2j5k6l7m8n9p0q1r2s3t4u5v6w7x8y9z0="].encode())
 except:
     st.error("⚠️ Streamlit Cloud의 Secrets 설정을 확인해주세요! (ADMIN_ID, ADMIN_PW, ENCRYPT_KEY 필요)")
 
