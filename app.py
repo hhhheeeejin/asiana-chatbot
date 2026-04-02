@@ -4,30 +4,40 @@ import google.generativeai as genai
 import os
 import datetime
 import matplotlib.pyplot as plt
-from cryptography.fernet import Fernet # 보안을 위해 추가
+from cryptography.fernet import Fernet
 
-# --- [보안 설정] Secrets에서 관리자 정보와 암호화 키 가져오기 ---
-try:
-    # 1. Secrets에서 관리자 정보를 가져옵니다.
-    ADMIN_ID = st.secrets["ADMIN_ID"]
-    ADMIN_PW = st.secrets["ADMIN_PW"]
-    
-    # 2. 암호화 키를 이용해 도구(cipher_suite)를 만듭니다.
-    # 이 줄이 실행되어야 'cipher_suite'라는 이름이 생성됩니다.
-    FERNET_KEY = st.secrets["h4k2j5k6l7m8n9p0q1r2s3t4u5v6w7x8y9z0="].encode()
-    cipher_suite = Fernet(FERNET_KEY) 
-except Exception as e:
-    st.error(f"⚠️ 보안 설정 로드 실패: {e}")
-    st.info("Streamlit Cloud의 Secrets에 ADMIN_ID, ADMIN_PW, ENCRYPT_KEY가 있는지 확인하세요.")
+# --- [수정된 보안 설정] ---
+def get_cipher():
+    """Secrets에서 키를 가져와 암호화 도구를 만드는 함수"""
+    try:
+        # Secrets에 ENCRYPT_KEY가 있는지 확인하고 도구를 만듭니다.
+        return Fernet(st.secrets["ENCRYPT_KEY"].encode())
+    except Exception as e:
+        st.error("⚠️ 보안 키(ENCRYPT_KEY)를 찾을 수 없습니다. Streamlit Secrets 설정을 확인해주세요.")
+        return None
 
-# --- [함수 정의] 이제 cipher_suite를 안전하게 사용할 수 있습니다 ---
+# --- [수정된 보안 함수] ---
 def encrypt_val(text):
-    # 위에서 cipher_suite가 이미 만들어졌으므로 에러가 나지 않습니다.
-    return cipher_suite.encrypt(str(text).encode()).decode()
+    cipher = get_cipher()
+    if cipher:
+        return cipher.encrypt(str(text).encode()).decode()
+    return text # 실패 시 원본 반환 (에러 방지)
 
 def decrypt_val(token):
-    # 여기서 cipher_suite를 사용합니다.
-    return cipher_suite.decrypt(token.encode()).decode()
+    cipher = get_cipher()
+    if cipher:
+        try:
+            return cipher.decrypt(token.encode()).decode()
+        except:
+            return "복호화 실패" # 암호화되지 않은 데이터일 경우 대비
+    return token
+
+# 관리자 인증 정보는 기존처럼 가져옵니다.
+try:
+    ADMIN_ID = st.secrets["ADMIN_ID"]
+    ADMIN_PW = st.secrets["ADMIN_PW"]
+except:
+    st.warning("ADMIN_ID 또는 ADMIN_PW 설정이 없습니다.")
 
 # --- 1. 구글 제미나이 설정 (기존 코드 유지) ---
 try:
