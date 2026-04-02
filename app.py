@@ -108,15 +108,19 @@ with tab1:
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"): st.markdown(prompt)
         with st.chat_message("assistant"):
-            # OpenAI 연동 부분 (API 키 입력 후 주석 해제하여 사용 가능)
-            # response = client.chat.completions.create(
-            #     model="gpt-3.5-turbo",
-            #     messages=[{"role": "system", "content": f"너는 다정한 채용 담당자야. 아래 정보를 바탕으로 답해줘:\n{COMPANY_KNOWLEDGE}"}] + st.session_state.messages
-            # )
-            # full_response = response.choices[0].message.content
-            full_response = f"'{prompt}'에 대한 정보는 공고 내용을 바탕으로 답변 드릴 예정입니다. (API 연동 시 실제 답변 노출)"
+            # 진짜 AI에게 물어보는 과정입니다.
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": f"너는 아시아나 에어포트의 다정한 채용 담당자야. 아래 [채용 정보]를 바탕으로 친절하게 답변해줘. \n\n[채용 정보]:\n{COMPANY_KNOWLEDGE}"
+                    }
+                ] + st.session_state.messages
+            )
+            # AI가 생성한 진짜 답변 내용을 가져옵니다.
+            full_response = response.choices[0].message.content
             st.markdown(full_response)
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
 
 # [탭 2: 모바일 지원]
 with tab2:
