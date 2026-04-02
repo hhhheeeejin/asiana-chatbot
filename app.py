@@ -12,7 +12,7 @@ import re
 st.set_page_config(page_title="아시아나 에어포트 채용 비서", layout="wide")
 
 # [보안 주의] 실제 운영 시 본인의 OpenAI API 키를 입력하세요.
-client = openai.OpenAI(api_key="AIzaSyDowXmHrD3-NeWM90ZnROo3RX3F269gZGc")
+client = openai.OpenAI(api_key=st.secrets["AIzaSyDowXmHrD3-NeWM90ZnROo3RX3F269gZGc"])
 DATA_FILE = "applicant_data.csv"
 
 # 한글 폰트 설정 (Windows 기준: Malgun Gothic)
