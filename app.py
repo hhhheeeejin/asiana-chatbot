@@ -94,4 +94,27 @@ with tab1:
     prompt = st.chat_input("채용에 대해 궁금한 점을 물어보세요!")
     if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.
+        with st.chat_message("user"): st.markdown(prompt)
+
+        with st.chat_message("assistant"):
+            full_instruction = f"너는 다정한 채용 담당자야. 아래 정보를 바탕으로 답해줘:\n{COMPANY_KNOWLEDGE}\n\n질문: {prompt}"
+            response = model.generate_content(full_instruction)
+            st.markdown(response.text)
+            st.session_state.messages.append({"role": "assistant", "content": response.text})
+
+# [탭 2: 관리자 분석]
+with tab2:
+    st.subheader("📈 지원자 데이터 관리")
+    admin_pw = st.text_input("비밀번호 입력", type="password")
+    if admin_pw == "heejin1234":
+        if os.path.exists(DATA_FILE):
+            df = pd.read_csv(DATA_FILE)
+            st.write(f"현재 총 지원자: **{len(df)}명**")
+            # 최신순으로 정렬해서 보여주기
+            st.dataframe(df.sort_values(by="신청시간", ascending=False))
+            
+            # 엑셀 다운로드 버튼
+            csv = df.to_csv(index=False).encode('utf-8-sig')
+            st.download_button("📥 전체 명단 엑셀 다운로드", data=csv, file_name='applicants.csv', mime='text/csv')
+        else:
+            st.info("아직 접수된 데이터가 없습니다.")
