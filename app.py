@@ -6,38 +6,45 @@ import datetime
 import matplotlib.pyplot as plt
 from cryptography.fernet import Fernet
 
-# --- [수정된 보안 설정] ---
+# --- [1. 보안 핵심: 암호화 도구 가져오기 함수] ---
 def get_cipher():
-    """Secrets에서 키를 가져와 암호화 도구를 만드는 함수"""
+    """Secrets에서 ENCRYPT_KEY를 가져와 암호화 도구를 만드는 함수"""
     try:
-        # Secrets에 ENCRYPT_KEY가 있는지 확인하고 도구를 만듭니다.
-        return Fernet(st.secrets["ENCRYPT_KEY"].encode())
+        # st.secrets에 ENCRYPT_KEY가 반드시 등록되어 있어야 합니다.
+        key = st.secrets["h4k2j5k6l7m8n9p0q1r2s3t4u5v6w7x8y9z0="].encode()
+        return Fernet(key)
     except Exception as e:
-        st.error("⚠️ 보안 키(ENCRYPT_KEY)를 찾을 수 없습니다. Streamlit Secrets 설정을 확인해주세요.")
+        # 키가 없으면 화면에 경고를 띄웁니다.
+        st.error("⚠️ 'ENCRYPT_KEY'를 찾을 수 없습니다. Streamlit Secrets 설정을 확인해주세요.")
         return None
 
-# --- [수정된 보안 함수] ---
+# --- [2. 보안 함수들] ---
 def encrypt_val(text):
     cipher = get_cipher()
-    if cipher:
+    if cipher and text:
         return cipher.encrypt(str(text).encode()).decode()
-    return text # 실패 시 원본 반환 (에러 방지)
+    return str(text)
 
 def decrypt_val(token):
     cipher = get_cipher()
-    if cipher:
+    if cipher and token:
         try:
-            return cipher.decrypt(token.encode()).decode()
+            # 암호화된 데이터인 경우 풀어서 보여줍니다.
+            return cipher.decrypt(str(token).encode()).decode()
         except:
-            return "복호화 실패" # 암호화되지 않은 데이터일 경우 대비
-    return token
+            # 암호화되지 않은 일반 텍스트인 경우 그대로 보여줍니다 (에러 방지).
+            return str(token)
+    return str(token)
 
-# 관리자 인증 정보는 기존처럼 가져옵니다.
+# --- [3. 관리자 정보 가져오기] ---
 try:
     ADMIN_ID = st.secrets["ADMIN_ID"]
     ADMIN_PW = st.secrets["ADMIN_PW"]
 except:
-    st.warning("ADMIN_ID 또는 ADMIN_PW 설정이 없습니다.")
+    st.warning("⚠️ ADMIN_ID 또는 ADMIN_PW가 Secrets에 설정되지 않았습니다.")
+
+# --- [4. 제미나이 설정] ---
+# ... 기존 제미나이 설정 코드 유지 ...
 
 # --- 1. 구글 제미나이 설정 (기존 코드 유지) ---
 try:
