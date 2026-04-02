@@ -6,43 +6,36 @@ import datetime
 import matplotlib.pyplot as plt
 from cryptography.fernet import Fernet
 
-# --- [1. 보안 핵심: 암호화 도구 가져오기 함수] ---
+# --- [1. 보안 핵심: 에러 방지용 도구 함수] ---
 def get_cipher():
-    """Secrets에서 ENCRYPT_KEY를 가져와 암호화 도구를 만드는 함수"""
+    """Secrets에서 키를 가져와 도구를 만듭니다. 없으면 None을 반환해요."""
     try:
-        # st.secrets에 ENCRYPT_KEY가 반드시 등록되어 있어야 합니다.
-        key = st.secrets["h4k2j5k6l7m8n9p0q1r2s3t4u5v6w7x8y9z0="].encode()
-        return Fernet(key)
-    except Exception as e:
-        # 키가 없으면 화면에 경고를 띄웁니다.
-        st.error("⚠️ 'ENCRYPT_KEY'를 찾을 수 없습니다. Streamlit Secrets 설정을 확인해주세요.")
-        return None
+        if "ENCRYPT_KEY" in st.secrets:
+            return Fernet(st.secrets["h4k2j5k6l7m8n9p0q1r2s3t4u5v6w7x8y9z0="].encode())
+    except:
+        pass
+    return None
 
-# --- [2. 보안 함수들] ---
+def decrypt_val(token):
+    """암호를 푸는 함수 (도구가 없거나 암호가 아니면 원본 반환)"""
+    cipher = get_cipher()
+    if cipher and token:
+        try:
+            return cipher.decrypt(str(token).encode()).decode()
+        except:
+            return str(token) # 암호화 안 된 옛날 데이터면 그냥 보여줌
+    return str(token)
+
 def encrypt_val(text):
+    """암호화 하는 함수"""
     cipher = get_cipher()
     if cipher and text:
         return cipher.encrypt(str(text).encode()).decode()
     return str(text)
 
-def decrypt_val(token):
-    cipher = get_cipher()
-    if cipher and token:
-        try:
-            # 암호화된 데이터인 경우 풀어서 보여줍니다.
-            return cipher.decrypt(str(token).encode()).decode()
-        except:
-            # 암호화되지 않은 일반 텍스트인 경우 그대로 보여줍니다 (에러 방지).
-            return str(token)
-    return str(token)
-
-# --- [3. 관리자 정보 가져오기] ---
-try:
-    ADMIN_ID = st.secrets["ADMIN_ID"]
-    ADMIN_PW = st.secrets["ADMIN_PW"]
-except:
-    st.warning("⚠️ ADMIN_ID 또는 ADMIN_PW가 Secrets에 설정되지 않았습니다.")
-
+# --- [2. 관리자 인증 정보] ---
+ADMIN_ID = st.secrets.get("ADMIN_ID", "admin")
+ADMIN_PW = st.secrets.get("ADMIN_PW", "1234")
 # --- [4. 제미나이 설정] ---
 # ... 기존 제미나이 설정 코드 유지 ...
 
@@ -157,31 +150,38 @@ with tab1:
 # [탭 2: 관리자 분석 - 보안 강화 버전]
 with tab2:
     st.subheader("🔐 보안 관리자 로그인")
-    col1, col2 = st.columns(2)
-    input_id = col1.text_input("아이디")
-    input_pw = col2.text_input("비밀번호", type="password")
+    c1, c2 = st.columns(2)
+    in_id = c1.text_input("아이디", key="admin_id_login")
+    in_pw = c2.text_input("비밀번호", type="password", key="admin_pw_login")
 
-    if input_id == ADMIN_ID and input_pw == ADMIN_PW:
-        st.success("🔓 인증 성공")
+    if in_id == ADMIN_ID and in_pw == ADMIN_PW:
+        st.success("🔓 인증 성공!")
+        
         if os.path.exists(DATA_FILE):
-            df = pd.read_csv(DATA_FILE)
-            
-            # 연락처 복호화 (볼 때만 원래 번호로 복구)
-            df['연락처'] = df['연락처'].apply(decrypt_val)
-            
-            st.write(f"현재 총 지원자: **{len(df)}명**")
-            st.dataframe(df.sort_values(by="신청시간", ascending=False))
-            
-            # 엑셀 다운로드
-            csv = df.to_csv(index=False).encode('utf-8-sig')
-            st.download_button("📥 전체 명단 엑셀 다운로드", data=csv, file_name='applicants.csv', mime='text/csv')
-            
-            # 데이터 파기 기능
-            st.divider()
-            if st.button("🚫 모든 데이터 영구 파기"):
+            # --- 에러가 나기 전에 '초기화 버튼'부터 배치합니다 ---
+            st.warning("⚠️ 데이터 형식이 맞지 않으면 에러가 날 수 있습니다.")
+            if st.button("🚫 모든 데이터 초기화 (파기)"):
                 os.remove(DATA_FILE)
-                st.error("삭제되었습니다. 페이지를 새로고침하세요.")
+                st.success("데이터가 삭제되었습니다. 새로고침 후 다시 이용하세요.")
+                st.rerun()
+            
+            st.divider()
+
+            # 에러가 나더라도 화면이 멈추지 않게 보호막(try-except)을 쳤습니다.
+            try:
+                df = pd.read_csv(DATA_FILE)
+                # '연락처' 컬럼이 있으면 암호를 풀어봅니다.
+                if '연락처' in df.columns:
+                    df['연락처'] = df['연락처'].apply(decrypt_val)
+                
+                st.write(f"총 지원자: **{len(df)}명**")
+                st.dataframe(df.sort_values(by="신청시간", ascending=False))
+                
+                # 엑셀 다운로드
+                csv = df.to_csv(index=False).encode('utf-8-sig')
+                st.download_button("📥 엑셀 다운로드", data=csv, file_name='applicants.csv')
+            except Exception as e:
+                st.error(f"데이터 로딩 중 오류 발생: {e}")
+                st.info("위의 '초기화' 버튼을 눌러 데이터를 비우고 새로 시작해보세요.")
         else:
-            st.info("데이터가 없습니다.")
-    elif input_id != "":
-        st.error("🚫 인증 정보가 올바르지 않습니다.")
+            st.info("저장된 데이터가 없습니다.")
