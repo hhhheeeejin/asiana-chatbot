@@ -7,10 +7,20 @@ import matplotlib.pyplot as plt
 
 # --- 1. 구글 제미나이 설정 ---
 try:
-    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    api_key = st.secrets["GOOGLE_API_KEY"]
+    genai.configure(api_key=api_key)
+    
+    # 내 키로 사용 가능한 모델 목록 중에서 'generateContent'가 되는 첫 번째 모델을 찾습니다.
+    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    
+    if available_models:
+        # 가장 성능이 좋은 모델을 우선 선택 (보통 gemini-1.5-flash나 gemini-pro)
+        selected_model = available_models[0] 
+        model = genai.GenerativeModel(selected_model)
+    else:
+        st.error("사용 가능한 제미나이 모델을 찾을 수 없습니다. API 키 권한을 확인해주세요.")
 except Exception as e:
-    st.error("API 키 설정에 문제가 있습니다. Secrets 설정을 확인해주세요.")
+    st.error(f"연결 실패: {e}")
 
 DATA_FILE = "applicant_data.csv"
 
