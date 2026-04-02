@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # --- 1. 구글 제미나이 설정 ---
 try:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-    model = genai.GenerativeModel('models/gemini-pro')
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
 except Exception as e:
     st.error("API 키 설정에 문제가 있습니다. Secrets 설정을 확인해주세요.")
 
