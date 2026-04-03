@@ -1,68 +1,16 @@
 import streamlit as st
 import pandas as pd
-import google.generativeai as genai
 import os
-import datetime
-import matplotlib.pyplot as plt
-from cryptography.fernet import Fernet
+import requests
+import json
 
-# --- [1. 보안 핵심: 에러 방지용 도구 함수] ---
-def get_cipher():
-    """Secrets에서 키를 가져와 도구를 만듭니다. 없으면 None을 반환해요."""
-    try:
-        if "ENCRYPT_KEY" in st.secrets:
-            return Fernet(st.secrets["h4k2j5k6l7m8n9p0q1r2s3t4u5v6w7x8y9z0="].encode())
-    except:
-        pass
-    return None
+# 1. 설정 (희희진님의 API 키)
+API_KEY = st.secrets["GEMINI_API_KEY"]
+APPLICANT_FILE = "applicants.xlsx"
+QUESTION_LOG_FILE = "questions_log.xlsx"
 
-def decrypt_val(token):
-    """암호를 푸는 함수 (도구가 없거나 암호가 아니면 원본 반환)"""
-    cipher = get_cipher()
-    if cipher and token:
-        try:
-            return cipher.decrypt(str(token).encode()).decode()
-        except:
-            return str(token) # 암호화 안 된 옛날 데이터면 그냥 보여줌
-    return str(token)
-
-def encrypt_val(text):
-    """암호화 하는 함수"""
-    cipher = get_cipher()
-    if cipher and text:
-        return cipher.encrypt(str(text).encode()).decode()
-    return str(text)
-
-# --- [2. 관리자 인증 정보] ---
-ADMIN_ID = st.secrets.get("ADMIN_ID", "admin")
-ADMIN_PW = st.secrets.get("ADMIN_PW", "1234")
-# --- [4. 제미나이 설정] ---
-# ... 기존 제미나이 설정 코드 유지 ...
-
-# --- 1. 구글 제미나이 설정 (기존 코드 유지) ---
-try:
-    api_key = st.secrets["GOOGLE_API_KEY"]
-    genai.configure(api_key=api_key)
-    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    if available_models:
-        selected_model = available_models[0] 
-        model = genai.GenerativeModel(selected_model)
-    else:
-        st.error("사용 가능한 제미나이 모델을 찾을 수 없습니다.")
-except Exception as e:
-    st.error(f"연결 실패: {e}")
-
-DATA_FILE = "applicant_data.csv"
-
-# --- [보안 함수] 암호화 및 복호화 ---
-def encrypt_val(text):
-    return cipher_suite.encrypt(str(text).encode()).decode()
-
-def decrypt_val(token):
-    return cipher_suite.decrypt(token.encode()).decode()
-
-# --- 2. 채용 정보 지식 베이스 (기존 내용 유지) ---
-COMPANY_KNOWLEDGE = """
+# 2. 채용 공고 정보
+job_info = """
 [아시아나 에어포트 채용 정보]
 - 회사명: 아시아나 에어포트(인천공항)
 – 하는 업무: 아시아나 항공기 기내청소, 정리정돈, 시트, 벽면, 주방 등 청소업무, 항공기 출발 전후 정비
@@ -77,111 +25,90 @@ COMPANY_KNOWLEDGE = """
 - 주차: 야외 주차장 이용 가능, 월 3만원 별도 비용 발생 
 """
 
-# --- 3. 데이터 저장 함수 (암호화 적용) ---
+# 3. AI 상담 함수 (안정적인 v1 주소 사용)
+def ask_gemini_direct(prompt):
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={API_KEY}"
+    headers = {'Content-Type': 'application/json'}
+    data = {
+        "contents": [{
+            "parts": [{"text": f"너는 아시아나 에어포트 채용 담당자야. 다음 정보를 바탕으로 답해줘.\n정보: {job_info}\n질문: {prompt}"}]
+        }]
+    }
+    try:
+        response = requests.post(url, headers=headers, data=json.dumps(data), timeout=10)
+        result = response.json()
+        if 'candidates' in result:
+            return result['candidates'][0]['content']['parts'][0]['text']
+        return "죄송합니다. 답변을 생성할 수 없습니다."
+    except:
+        return "AI 연결에 일시적인 오류가 있습니다. 잠시 후 다시 시도해주세요."
+
+# --- 화면 구성 ---
+st.set_page_config(page_title="아시아나 에어포트 채용", layout="wide")
+
+# [지원서 저장 함수 - 에러 해결 핵심]
 def save_application(data_dict):
-    # 연락처 정보를 암호화하여 저장합니다.
-    data_dict["연락처"] = [encrypt_val(data_dict["연락처"][0])]
-    
-    if os.path.exists(DATA_FILE):
-        df_existing = pd.read_csv(DATA_FILE)
-        # 중복 체크 시에도 암호화된 값으로 비교하거나, 이름/시간 등 다른 지표 활용
-        # 여기서는 단순화를 위해 저장을 진행합니다.
+    try:
+        # 데이터프레임 생성 (에러가 나던 암호화 과정 생략)
+        new_row = pd.DataFrame([data_dict])
+        
+        if os.path.exists(APPLICANT_FILE):
+            df_old = pd.read_excel(APPLICANT_FILE)
+            # 연락처 중복 체크
+            if str(data_dict["연락처"]) in df_old['연락처'].astype(str).values:
+                return "duplicate"
+            df_final = pd.concat([df_old, new_row], ignore_index=True)
+        else:
+            df_final = new_row
             
-    df_new = pd.DataFrame(data_dict)
-    df_new.to_csv(DATA_FILE, mode='a', header=not os.path.exists(DATA_FILE), index=False, encoding='utf-8-sig')
-    return "success"
+        df_final.to_excel(APPLICANT_FILE, index=False)
+        return "success"
+    except Exception as e:
+        st.error(f"엑셀 저장 중 오류 발생: {e}")
+        return "error"
 
-# --- 4. 메인 화면 레이아웃 ---
-st.set_page_config(page_title="아시아나 에어포트 채용비서", layout="wide")
+# --- 메인 레이아웃 ---
+st.title("✈️ 아시아나 에어포트 채용 시스템")
 
-# [왼쪽 사이드바: 기존 질문 항목 100% 동일]
+# [사이드바 지원서]
 with st.sidebar:
-    st.header("📋 모바일 간편지원")
-    st.write("아래 항목을 모두 입력해 주세요.")
-    
-    with st.form("sidebar_form", clear_on_submit=True):
+    st.subheader("📝 모바일 간편 지원")
+    with st.form("apply_form", clear_on_submit=True):
         name = st.text_input("이름")
         gender = st.radio("성별", ["남성", "여성"], horizontal=True)
-        age = st.number_input("나이", min_value=19, max_value=70, value=30)
+        age = st.number_input("나이", min_value=19, max_value=70, value=25)
         phone = st.text_input("연락처 (숫자만)")
         address = st.text_input("주소 (OO동까지)")
+        transport = st.selectbox("출퇴근 교통방법", ["셔틀버스", "대중교통", "자차"])
         
-        st.write("---")
-        transport = st.selectbox("출퇴근 교통방법", ["셔틀버스", "자차", "대중교통"])
-        travel_time = st.text_input("출퇴근 소요시간 (예: 40분)")
-        arrival_ok = st.radio("오전 05:20까지 도착 가능여부", ["O", "X"], horizontal=True)
-        
-        if st.form_submit_button("지원서 최종 제출"):
-            if name and phone and travel_time:
+        submitted = st.form_submit_button("지원서 최종 제출")
+        if submitted:
+            if name and phone:
                 app_data = {
-                    "신청시간": [datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
-                    "이름": [name], "성별": [gender], "나이": [age],
-                    "연락처": [phone], "주소": [address], "교통방법": [transport],
-                    "소요시간": [travel_time], "05:20도착가능": [arrival_ok]
+                    "신청시간": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "이름": name, "성별": gender, "나이": age, 
+                    "연락처": phone, "주소": address, "교통방법": transport
                 }
-                res = save_application(app_data)
-                st.success(f"✅ {name}님, 접수가 완료되었습니다!")
-                st.balloons()
+                result = save_application(app_data)
+                if result == "success":
+                    st.balloons()
+                    st.success(f"{name}님, 지원이 완료되었습니다!")
+                elif result == "duplicate":
+                    st.warning("이미 지원된 연락처입니다.")
             else:
-                st.warning("모든 필수 항목을 입력해주세요.")
+                st.error("이름과 연락처는 필수입니다.")
 
-# [오른쪽 메인]
-st.title("✈️ 아시아나 에어포트 스마트 채용 시스템")
-tab1, tab2 = st.tabs(["💬 AI 실시간 상담", "📊 관리 데이터 분석"])
-
-# [탭 1: AI 상담 - 기존 로직 유지]
+# [AI 상담 탭]
+tab1, = st.tabs(["💬 AI 상담원"])
 with tab1:
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+    if "messages" not in st.session_state: st.session_state.messages = []
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]): st.markdown(msg["content"])
 
-    prompt = st.chat_input("채용에 대해 궁금한 점을 물어보세요!")
-    if prompt:
+    if prompt := st.chat_input("채용에 대해 궁금한 점을 물어보세요!"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"): st.markdown(prompt)
-
         with st.chat_message("assistant"):
-            full_instruction = f"너는 다정한 채용 담당자야. 아래 정보를 바탕으로 답해줘:\n{COMPANY_KNOWLEDGE}\n\n질문: {prompt}"
-            response = model.generate_content(full_instruction)
-            st.markdown(response.text)
-            st.session_state.messages.append({"role": "assistant", "content": response.text})
-
-# [탭 2: 관리자 분석 - 보안 강화 버전]
-with tab2:
-    st.subheader("🔐 보안 관리자 로그인")
-    c1, c2 = st.columns(2)
-    in_id = c1.text_input("아이디", key="admin_id_login")
-    in_pw = c2.text_input("비밀번호", type="password", key="admin_pw_login")
-
-    if in_id == ADMIN_ID and in_pw == ADMIN_PW:
-        st.success("🔓 인증 성공!")
-        
-        if os.path.exists(DATA_FILE):
-            # --- 에러가 나기 전에 '초기화 버튼'부터 배치합니다 ---
-            st.warning("⚠️ 데이터 형식이 맞지 않으면 에러가 날 수 있습니다.")
-            if st.button("🚫 모든 데이터 초기화 (파기)"):
-                os.remove(DATA_FILE)
-                st.success("데이터가 삭제되었습니다. 새로고침 후 다시 이용하세요.")
-                st.rerun()
-            
-            st.divider()
-
-            # 에러가 나더라도 화면이 멈추지 않게 보호막(try-except)을 쳤습니다.
-            try:
-                df = pd.read_csv(DATA_FILE)
-                # '연락처' 컬럼이 있으면 암호를 풀어봅니다.
-                if '연락처' in df.columns:
-                    df['연락처'] = df['연락처'].apply(decrypt_val)
-                
-                st.write(f"총 지원자: **{len(df)}명**")
-                st.dataframe(df.sort_values(by="신청시간", ascending=False))
-                
-                # 엑셀 다운로드
-                csv = df.to_csv(index=False).encode('utf-8-sig')
-                st.download_button("📥 엑셀 다운로드", data=csv, file_name='applicants.csv')
-            except Exception as e:
-                st.error(f"데이터 로딩 중 오류 발생: {e}")
-                st.info("위의 '초기화' 버튼을 눌러 데이터를 비우고 새로 시작해보세요.")
-        else:
-            st.info("저장된 데이터가 없습니다.")
+            answer = ask_gemini_direct(prompt)
+            st.markdown(answer)
+            st.session_state.messages.append({"role": "assistant", "content": answer})
