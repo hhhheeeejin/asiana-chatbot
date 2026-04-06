@@ -262,7 +262,19 @@ with tab1:
         <div class="info-card"><strong>⏰ 근무시간</strong><br>오전 05:45 ~ 14:45<br>오후 14:00 ~ 23:00<br>3일 근무 · 1일 휴무 반복</div>
         <div class="info-card"><strong>💰 급여</strong><br>월 평균 <b>297만원 이상</b><br>(기본급+식대+교통비+수당)</div>
         <div class="info-card"><strong>🚌 셔틀버스</strong><br>발산역 / 김포공항 04:30<br>부천 원종사거리 04:30<br>고강동 04:30</div>
-        <div class="info-card"><strong>🎁 복리후생</strong><br>식비 · 교통비 · 유니폼 지급<br>1년 근무 시 항공권 (15만원)</div>
+       <div class="info-card"><strong>🎁 복리후생</strong><br>식비 · 교통비 · 유니폼 지급<br>1년 근무 시 항공권 (15만원)</div>
+        <a href="https://open.kakao.com/o/srqqCGki" target="_blank" style="
+            display: block;
+            background: #FEE500;
+            color: #3A1D1D;
+            text-align: center;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: none;
+            margin-top: 4px;
+        ">💬 카카오 오픈채팅 문의</a>
         """, unsafe_allow_html=True)
 
     with col_chat:
