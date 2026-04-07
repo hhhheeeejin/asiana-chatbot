@@ -218,8 +218,10 @@ html, body, [class*="css"] { font-family: 'Noto Sans KR', sans-serif; }
 .info-card {
     background: #f0f4ff; border-left: 4px solid #0057b8; border-radius: 10px;
     padding: 16px 20px; margin-bottom: 12px; font-size: 0.88rem; line-height: 1.7;
+    color: #1a1a1a !important;
 }
-.info-card strong { color: #003580; }
+.info-card strong { color: #003580 !important; }
+.info-card b { color: #003580 !important; }
 div[data-testid="stFormSubmitButton"] > button {
     background: linear-gradient(135deg, #003580, #0057b8) !important;
     color: white !important; border: none !important; border-radius: 10px !important;
