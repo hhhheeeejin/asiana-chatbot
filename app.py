@@ -222,7 +222,7 @@ DIRECT_ANSWERS = {
 |--------|----------|
 | 발산역 / 김포공항 | **04:30** 출발 |
 | 부천 원종사거리 | **04:30** 출발 |
-| 고강동 | 지원 |
+| 고강동 |  **04:30** 출발  |
 
 ※ 셔틀 이용 시 교통비(일 12,000원)에서 셔틀비용 차감 후 지급
 
@@ -373,7 +373,7 @@ with col_info:
 
     with st.expander("🚌 셔틀버스"):
         st.markdown("""
-        <div class="info-card"><strong>🚌 셔틀버스</strong><br>발산역 / 김포공항 04:30<br>부천 원종사거리 04:30<br>고강동 지원<br><br>※ 셔틀 이용 시 교통비에서 셔틀비용 차감 후 지급<br>※ 단시간조는 셔틀버스 지원 불가</div>
+        <div class="info-card"><strong>🚌 셔틀버스</strong><br>발산역 / 김포공항 04:30<br>부천 원종사거리 04:30<br>고강동 4:30<br><br>※ 셔틀 이용 시 교통비에서 셔틀비용 차감 후 지급<br>※ 단시간조는 셔틀버스 지원 불가</div>
         """, unsafe_allow_html=True)
 
     with st.expander("🎁 복리후생"):
